@@ -8,8 +8,9 @@ module.exports = (sequelize, DataTypes) => {
   Car.init(
     {
       name: DataTypes.STRING,
-      price: DataTypes.INTEGER,
-      deleted: DataTypes.BOOLEAN,
+      rentPerDay: DataTypes.INTEGER,
+      type: DataTypes.STRING,
+      is_deleted: DataTypes.BOOLEAN,
       created_by: {
         type: DataTypes.TEXT,
         allowNull: false,
@@ -26,7 +27,6 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: "{}",
       },
       image: DataTypes.STRING,
-      type: DataTypes.STRING,
     },
     {
       sequelize,

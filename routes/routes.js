@@ -35,21 +35,22 @@ router.post(prefix + "/member/login", (req, res) => {
 
 // Car Routes
 router.get(prefix + "/cars", authController.authorize, carController.listCar);
+router.get(prefix + "/cars/:id", carController.getCarById); // No token required
 router.post(
   prefix + "/cars",
-  authController.authorize,
+  authController.authorizeAdminOrSuperadmin,
   uploadMiddleware,
   carController.createCar
 );
 router.put(
   prefix + "/cars/:id",
-  authController.authorize,
+  authController.authorizeAdminOrSuperadmin,
   uploadMiddleware,
   carController.updateCar
 );
 router.delete(
   prefix + "/cars/:id",
-  authController.authorize,
+  authController.authorizeAdminOrSuperadmin,
   carController.deleteCar
 );
 

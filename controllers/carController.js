@@ -2,6 +2,10 @@ const { Car } = require("../models");
 const fs = require("fs");
 const path = require("path");
 
+// Helper function to create image link
+const createImageLink = (filename) =>
+  `http://localhost:3000/public/uploads/${filename}`;
+
 // get cars
 exports.listCar = async (req, res) => {
   try {
@@ -12,7 +16,8 @@ exports.listCar = async (req, res) => {
       email: req.user.email,
       data: cars.map((car) => ({
         ...car.get(),
-        created_by: JSON.parse(car.created_by || "{}"),
+        image: car.image ? createImageLink(car.image) : null,
+        created_by: car.created_by ? JSON.parse(car.created_by) : null,
         updated_by: car.updated_by ? JSON.parse(car.updated_by) : null,
         deleted_by: car.deleted_by ? JSON.parse(car.deleted_by) : null,
       })),
@@ -27,19 +32,52 @@ exports.listCar = async (req, res) => {
   }
 };
 
+// get car by id
+exports.getCarById = async (req, res) => {
+  try {
+    const car = await Car.findByPk(req.params.id);
+    if (!car) {
+      return res.status(404).json({ message: "Car not found" });
+    }
+    res.send({
+      message: "Car details",
+      data: {
+        ...car.get(),
+        image: car.image ? createImageLink(car.image) : null,
+        created_by: car.created_by ? JSON.parse(car.created_by) : null,
+        updated_by: car.updated_by ? JSON.parse(car.updated_by) : null,
+        deleted_by: car.deleted_by ? JSON.parse(car.deleted_by) : null,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ message: "Server error" });
+  }
+};
+
 // create car
 exports.createCar = async (req, res) => {
+  if (req.role === "Member") {
+    return res.status(403).json({
+      message: "Forbidden: Members cannot create cars",
+      role: req.role,
+      email: req.user.email,
+    });
+  }
+
   const car = {
     name: req.body.name,
-    price: req.body.price,
+    rentPerDay: req.body.rentPerDay,
     type: req.body.type,
-    deleted: false,
+    is_deleted: false,
     created_by: JSON.stringify({
       id: req.user.id,
       name: req.user.name,
       email: req.user.email,
       role: req.role,
     }),
+    updated_by: null,
+    deleted_by: null,
     image: req.file ? req.file.filename : null,
   };
   try {
@@ -51,6 +89,9 @@ exports.createCar = async (req, res) => {
       data: {
         ...newCar.get(),
         created_by: JSON.parse(newCar.created_by),
+        updated_by: newCar.updated_by ? JSON.parse(newCar.updated_by) : null,
+        deleted_by: newCar.deleted_by ? JSON.parse(newCar.deleted_by) : null,
+        image: newCar.image ? createImageLink(newCar.image) : null,
       },
     });
   } catch (err) {
@@ -64,12 +105,20 @@ exports.createCar = async (req, res) => {
 
 // update car by id
 exports.updateCar = async (req, res) => {
+  if (req.role === "Member") {
+    return res.status(403).json({
+      message: "Forbidden: Members cannot update cars",
+      role: req.role,
+      email: req.user.email,
+    });
+  }
+
   const car = {
     id: req.params.id,
     name: req.body.name,
-    price: req.body.price,
+    rentPerDay: req.body.rentPerDay,
     type: req.body.type,
-    deleted: false,
+    is_deleted: false,
     updated_by: JSON.stringify({
       id: req.user.id,
       name: req.user.name,
@@ -87,14 +136,6 @@ exports.updateCar = async (req, res) => {
         email: req.user.email,
       });
     }
-    if (
-      req.role === "Member" &&
-      JSON.parse(existingCar.created_by).id !== req.user.id
-    ) {
-      return res
-        .status(403)
-        .json({ message: "Forbidden", role: req.role, email: req.user.email });
-    }
 
     if (req.file && existingCar.image) {
       fs.unlinkSync(path.join("public/uploads", existingCar.image));
@@ -111,7 +152,8 @@ exports.updateCar = async (req, res) => {
       email: req.user.email,
       data: {
         ...car,
-        updated_by: JSON.parse(car.updated_by),
+        updated_by: car.updated_by ? JSON.parse(car.updated_by) : null,
+        image: car.image ? createImageLink(car.image) : null,
       },
     });
   } catch (err) {
@@ -125,6 +167,14 @@ exports.updateCar = async (req, res) => {
 
 // delete car by id
 exports.deleteCar = async (req, res) => {
+  if (req.role === "Member") {
+    return res.status(403).json({
+      message: "Forbidden: Members cannot delete cars",
+      role: req.role,
+      email: req.user.email,
+    });
+  }
+
   try {
     const existingCar = await Car.findByPk(req.params.id);
     if (!existingCar) {
@@ -134,18 +184,10 @@ exports.deleteCar = async (req, res) => {
         email: req.user.email,
       });
     }
-    if (
-      req.role === "Member" &&
-      JSON.parse(existingCar.created_by).id !== req.user.id
-    ) {
-      return res
-        .status(403)
-        .json({ message: "Forbidden", role: req.role, email: req.user.email });
-    }
 
     await Car.update(
       {
-        deleted: true,
+        is_deleted: true,
         deleted_by: JSON.stringify({
           id: req.user.id,
           name: req.user.name,
