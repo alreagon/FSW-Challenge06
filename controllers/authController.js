@@ -74,7 +74,7 @@ exports.authorizeAdminOrSuperadmin = async (req, res, next) => {
   }
 };
 
-// Simplified login function
+// login function
 exports.login = async (req, res) => {
   const { email, password, role } = req.body;
 
@@ -109,6 +109,7 @@ exports.login = async (req, res) => {
     res.send({
       message: "Login success",
       role,
+      name: user.name,
       email: user.email,
       token,
     });
@@ -118,12 +119,74 @@ exports.login = async (req, res) => {
   }
 };
 
-// Who Am I function
-exports.whoAmI = (req, res) => {
-  res.status(200).json({
-    message: "Success",
-    role: req.role,
-    email: req.user.email,
-    data: req.user,
-  });
+// Get all users function (no authorization required)
+exports.getAllUsers = async (req, res) => {
+  try {
+    const superadmins = await Superadmin.findAll();
+    const admins = await Admin.findAll();
+    const members = await Member.findAll();
+
+    const users = [
+      ...superadmins.map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: "Superadmin",
+        password: user.password,
+        token: jwt.sign({ user, role: "Superadmin" }, secretKey),
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })),
+      ...admins.map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: "Admin",
+        password: user.password,
+        token: jwt.sign({ user, role: "Admin" }, secretKey),
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })),
+      ...members.map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: "Member",
+        password: user.password,
+        token: jwt.sign({ user, role: "Member" }, secretKey),
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })),
+    ];
+
+    res.status(200).json({
+      message: "Success",
+      data: users,
+    });
+  } catch (error) {
+    res.status(500).send({ message: "Server error", error: error.message });
+  }
+};
+
+// Get current user details function (requires token)
+exports.getCurrentUser = async (req, res) => {
+  try {
+    const user = req.user;
+    const role = req.role;
+
+    res.status(200).json({
+      message: "Success",
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role,
+        password: user.password,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    });
+  } catch (error) {
+    res.status(500).send({ message: "Server error", error: error.message });
+  }
 };

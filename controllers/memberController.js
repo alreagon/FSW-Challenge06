@@ -6,7 +6,7 @@ const { Member } = require("../models");
 // create
 exports.register = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { name, email, password } = req.body;
     const user = await Member.findOne({ where: { email } });
     if (user) {
       return res.status(400).send({
@@ -15,6 +15,7 @@ exports.register = async (req, res) => {
     }
     const hashPassword = await bcrypt.hash(password, 10);
     const newMember = await Member.create({
+      name,
       email,
       password: hashPassword,
     });
@@ -22,6 +23,7 @@ exports.register = async (req, res) => {
       message: "Member created",
       Data: {
         id: newMember.id,
+        name: newMember.name,
         email: newMember.email,
       },
     });
@@ -30,36 +32,5 @@ exports.register = async (req, res) => {
     res.status(500).send({
       message: "Server error",
     });
-  }
-};
-
-// login
-exports.login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await Member.findOne({ where: { email } });
-    if (!user) {
-      return res.status(400).send({ message: "Member not found" });
-    }
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(400).send({ message: "Wrong password" });
-    }
-    const token = jwt.sign(
-      {
-        user,
-        role: "Member", // Ensure the role is included in the token
-      },
-      secretKey
-    );
-    res.send({
-      message: "Login success",
-      role: "member",
-      data: { email },
-      token,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).send({ message: "Server error" });
   }
 };
