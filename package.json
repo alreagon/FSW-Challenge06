@@ -7,7 +7,8 @@
   "scripts": {
     "start": "nodemon app.js",
     "create": "sequelize db:create",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "migrate": "sequelize db:migrate",
+    "seed": "sequelize db:seed:all"
   },
   "keywords": [],
   "author": "",
