@@ -2,29 +2,20 @@ const { Car } = require("../models");
 const fs = require("fs");
 const path = require("path");
 
-// list all cars where deleted false
+// get cars
 exports.listCar = async (req, res) => {
   try {
-    let cars;
-    if (req.role === "Member") {
-      cars = await Car.findAll({
-        where: {
-          deleted: false,
-          created_by: req.user.email,
-        },
-      });
-    } else {
-      cars = await Car.findAll({
-        where: {
-          deleted: false,
-        },
-      });
-    }
+    const cars = await Car.findAll();
     res.send({
       message: "List of cars",
       role: req.role,
       email: req.user.email,
-      data: cars,
+      data: cars.map((car) => ({
+        ...car.get(),
+        created_by: JSON.parse(car.created_by || "{}"),
+        updated_by: car.updated_by ? JSON.parse(car.updated_by) : null,
+        deleted_by: car.deleted_by ? JSON.parse(car.deleted_by) : null,
+      })),
     });
   } catch (error) {
     console.log(error);
@@ -43,7 +34,12 @@ exports.createCar = async (req, res) => {
     price: req.body.price,
     type: req.body.type,
     deleted: false,
-    created_by: req.user.email,
+    created_by: JSON.stringify({
+      id: req.user.id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.role,
+    }),
     image: req.file ? req.file.filename : null,
   };
   try {
@@ -52,7 +48,10 @@ exports.createCar = async (req, res) => {
       message: "Car Created",
       role: req.role,
       email: req.user.email,
-      data: newCar,
+      data: {
+        ...newCar.get(),
+        created_by: JSON.parse(newCar.created_by),
+      },
     });
   } catch (err) {
     res.status(400).json({
@@ -71,28 +70,34 @@ exports.updateCar = async (req, res) => {
     price: req.body.price,
     type: req.body.type,
     deleted: false,
-    updated_by: req.user.email,
+    updated_by: JSON.stringify({
+      id: req.user.id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.role,
+    }),
     image: req.file ? req.file.filename : null,
   };
   try {
     const existingCar = await Car.findByPk(req.params.id);
     if (!existingCar) {
-      return res
-        .status(404)
-        .json({
-          message: "Car not found",
-          role: req.role,
-          email: req.user.email,
-        });
+      return res.status(404).json({
+        message: "Car not found",
+        role: req.role,
+        email: req.user.email,
+      });
     }
-    if (req.role === "Member" && existingCar.created_by !== req.user.email) {
+    if (
+      req.role === "Member" &&
+      JSON.parse(existingCar.created_by).id !== req.user.id
+    ) {
       return res
         .status(403)
         .json({ message: "Forbidden", role: req.role, email: req.user.email });
     }
 
     if (req.file && existingCar.image) {
-      fs.unlinkSync(path.join("public/uploads", existingCar.image)); // delete old image
+      fs.unlinkSync(path.join("public/uploads", existingCar.image));
     }
 
     await Car.update(car, {
@@ -104,7 +109,10 @@ exports.updateCar = async (req, res) => {
       message: "Car Updated",
       role: req.role,
       email: req.user.email,
-      data: car,
+      data: {
+        ...car,
+        updated_by: JSON.parse(car.updated_by),
+      },
     });
   } catch (err) {
     res.status(400).json({
@@ -120,15 +128,16 @@ exports.deleteCar = async (req, res) => {
   try {
     const existingCar = await Car.findByPk(req.params.id);
     if (!existingCar) {
-      return res
-        .status(404)
-        .json({
-          message: "Car not found",
-          role: req.role,
-          email: req.user.email,
-        });
+      return res.status(404).json({
+        message: "Car not found",
+        role: req.role,
+        email: req.user.email,
+      });
     }
-    if (req.role === "Member" && existingCar.created_by !== req.user.email) {
+    if (
+      req.role === "Member" &&
+      JSON.parse(existingCar.created_by).id !== req.user.id
+    ) {
       return res
         .status(403)
         .json({ message: "Forbidden", role: req.role, email: req.user.email });
@@ -137,7 +146,12 @@ exports.deleteCar = async (req, res) => {
     await Car.update(
       {
         deleted: true,
-        deleted_by: req.user.email,
+        deleted_by: JSON.stringify({
+          id: req.user.id,
+          name: req.user.name,
+          email: req.user.email,
+          role: req.role,
+        }),
       },
       {
         where: {
@@ -146,7 +160,7 @@ exports.deleteCar = async (req, res) => {
       }
     );
     res.status(200).json({
-      message: "Car moved to trashbag",
+      message: "Car deleted",
       role: req.role,
       email: req.user.email,
     });
