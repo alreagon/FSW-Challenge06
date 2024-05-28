@@ -5,7 +5,6 @@ const adminController = require("../controllers/adminController");
 const memberController = require("../controllers/memberController");
 const authController = require("../controllers/authController");
 const carController = require("../controllers/carController");
-const trashbagController = require("../controllers/trashbagController");
 const uploadMiddleware = require("../middleware/upload");
 
 const prefix = "/api/v1";
@@ -54,19 +53,12 @@ router.delete(
   carController.deleteCar
 );
 
-// Trashbag Routes
+// User Routes
+router.get(prefix + "/users", authController.getAllUsers); // No token required
 router.get(
-  prefix + "/trashbag",
-  authController.authorizeAdminOrSuperadmin,
-  trashbagController.listTrashbag
-);
-router.delete(
-  prefix + "/trashbag/:id",
-  authController.authorizeAdminOrSuperadmin,
-  trashbagController.deleteTrashbag
-);
-
-// Auth Routes Who Am I
-router.get(prefix + "/users", authController.authorize, authController.whoAmI);
+  prefix + "/users/me",
+  authController.authorize,
+  authController.getCurrentUser
+); // Token required
 
 module.exports = router;
