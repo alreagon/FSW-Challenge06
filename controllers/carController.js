@@ -4,7 +4,7 @@ const path = require("path");
 
 // Helper function to create image link
 const createImageLink = (filename) =>
-  `http://localhost:3000/public/uploads/${filename}`;
+  `http://localhost:7447/public/uploads/${filename}`;
 
 // get cars
 exports.listCar = async (req, res) => {

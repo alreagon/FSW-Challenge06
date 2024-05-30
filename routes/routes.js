@@ -9,6 +9,20 @@ const uploadMiddleware = require("../middleware/upload");
 
 const prefix = "/api/v1";
 
+// Debugging statements
+console.log(
+  "superAdminController.createSuperadmin:",
+  typeof superAdminController.createSuperadmin
+);
+console.log("adminController.create:", typeof adminController.create);
+console.log(
+  "authController.authorizeSuperadmin:",
+  typeof authController.authorizeSuperadmin
+);
+console.log("authController.login:", typeof authController.login);
+console.log("memberController.register:", typeof memberController.register);
+console.log("carController.createCar:", typeof carController.createCar);
+
 // Super Admin Routes
 router.post(prefix + "/superadmin/login", (req, res) => {
   req.body.role = "Superadmin";
@@ -24,7 +38,11 @@ router.post(prefix + "/admin/login", (req, res) => {
   req.body.role = "Admin";
   authController.login(req, res);
 });
-router.post(prefix + "/admin/create", adminController.create);
+router.post(
+  prefix + "/admin/create",
+  authController.authorizeSuperadmin,
+  adminController.create
+);
 
 // Member Routes
 router.post(prefix + "/member/register", memberController.register);

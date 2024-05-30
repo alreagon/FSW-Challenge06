@@ -44,6 +44,34 @@ exports.authorize = async (req, res, next) => {
   }
 };
 
+// Superadmin authorization middleware
+exports.authorizeSuperadmin = async (req, res, next) => {
+  try {
+    const bearerToken = req.headers.authorization;
+    if (!bearerToken) {
+      return res
+        .status(401)
+        .send({ message: "Unauthorized - No token provided" });
+    }
+
+    const token = bearerToken.split(" ")[1];
+    const tokenPayload = jwt.verify(token, secretKey);
+
+    if (tokenPayload.role === "Superadmin") {
+      req.user = tokenPayload.user;
+      req.role = tokenPayload.role;
+      next();
+    } else {
+      return res
+        .status(401)
+        .send({ message: "Unauthorized - Superadmin access required" });
+    }
+  } catch (error) {
+    console.log("Authorization Error:", error.message);
+    res.status(401).send({ message: "Unauthorized - Error: " + error.message });
+  }
+};
+
 // Admin and Superadmin authorization middleware
 exports.authorizeAdminOrSuperadmin = async (req, res, next) => {
   try {
